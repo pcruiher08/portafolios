@@ -372,7 +372,12 @@ def display_portfolio(title, weights):
     st.write(f"Máxima caída (Drawdown): **{max_dd:.2%}**")
     st.caption("**Máxima caída (Drawdown)**: Mayor pérdida porcentual desde un máximo histórico hasta un mínimo posterior.")
 
-    beta = calculate_beta(portfolio_returns.loc[benchmark_returns.index], benchmark_returns)
+    # --- Align indices for beta and metrics that require both series ---
+    common_index = portfolio_returns.index.intersection(benchmark_returns.index)
+    aligned_portfolio_returns = portfolio_returns.loc[common_index]
+    aligned_benchmark_returns = benchmark_returns.loc[common_index]
+
+    beta = calculate_beta(aligned_portfolio_returns, aligned_benchmark_returns)
     st.write(f"Beta del portafolio vs. S&P 500: **{beta:.3f}**")
     st.caption("**Beta**: Covarianza entre los retornos del portafolio y el índice de referencia dividida por la varianza del índice. Mide la sensibilidad del portafolio al mercado.")
 
@@ -392,7 +397,7 @@ def display_portfolio(title, weights):
         plot_pie_chart(weights, prices.columns, f"{title} - Distribución del Portafolio")
 
     st.markdown("#### Gráficos de desempeño del portafolio")
-    plot_cumulative_returns(portfolio_returns.loc[benchmark_returns.index], benchmark_returns)
+    plot_cumulative_returns(aligned_portfolio_returns, aligned_benchmark_returns)
     plot_drawdown(portfolio_returns)
     plot_rolling_volatility(portfolio_returns)
 
@@ -409,7 +414,11 @@ def get_portfolio_metrics(weights):
     ret, vol, sharpe = portfolio_performance(weights, mean_returns, cov_matrix, risk_free_rate)
     portfolio_returns = (returns * weights).sum(axis=1)
     max_dd = calculate_max_drawdown(portfolio_returns)
-    beta = calculate_beta(portfolio_returns.loc[benchmark_returns.index], benchmark_returns)
+    # --- Align indices for beta ---
+    common_index = portfolio_returns.index.intersection(benchmark_returns.index)
+    aligned_portfolio_returns = portfolio_returns.loc[common_index]
+    aligned_benchmark_returns = benchmark_returns.loc[common_index]
+    beta = calculate_beta(aligned_portfolio_returns, aligned_benchmark_returns)
     calmar = calculate_calmar_ratio(ret, max_dd)
     sortino = calculate_sortino_ratio(portfolio_returns, risk_free_rate)
     return {
@@ -452,3 +461,15 @@ st.download_button(
 # Después de mostrar todos los portafolios/métricas, mostrar el heatmap de correlación para los símbolos seleccionados
 #st.markdown("### Matriz de correlación de los activos seleccionados")
 #plot_correlation_heatmap(prices)
+
+# --- Footer ---
+st.markdown(
+    """
+    <hr style="margin-top:2em;margin-bottom:1em;">
+    <div style="text-align:center; color:gray;">
+        Creado por Pablo &middot; 
+        <a href="https://github.com/pcruiher08" target="_blank" style="color:inherit;text-decoration:underline;">GitHub: @pcruiher08</a>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
